@@ -35,6 +35,10 @@ def delete():
     result = "删除成功"
     if p is not None and os.path.exists(p):
         os.remove(p)
+        trade = p.replace(".html", "") + "-trade.html"
+        print(trade)
+        if os.path.exists(trade):
+            os.remove(trade)
     elif p is None:
         result = "文件不存在"
     elif p is not None and not os.path.exists(p):
