@@ -8,44 +8,256 @@
 
     <script src="../static/js/jquery.min.js"></script>
     <script src="../static/js/bootstrap.min.js"></script>
+    <style>
+        li {
+            list-style: none;
+        }
+
+        a {
+            display: block;
+        }
+
+        div.jumbotron {
+            margin-bottom: 0px;
+        }
+
+        p.lead {
+            margin-bottom: 0px;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .str {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .str:focus {
+            background-color: #bd2130;
+        }
+
+        .textd {
+            text-align: center;
+        }
+
+        a:hover {
+            color: #000000;
+            text-decoration: none;
+        }
+
+    </style>
+
 </head>
 <body>
 <div class="container">
-    <table class="table">
-        <thead class="thead-dark">
-        <tr>
-            <th scope="col">策略名称</th>
-            <th scope="col">时间</th>
-            <th scope="col">查看</th>
-            <th scope="col">删除</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for i in data %}
-        <tr>
-            <td> {{ i[0] }}</td>
-            <td> {{ i[1] }}</td>
-            <td><a href="{{ url_for('get_file_detail', path=i[2])}}"> 查看 </a></td>
-            <td><a onclick="delete_file('{{i[3]}}')" href=""> 删除 </a></td>
-        </tr>
+    <div class="jumbotron">
+        <h1 class="display-4">Ctpbee BackTest Support</h1>
+        <p class="lead">For Easy Trade</p>
+    </div>
+    <hr class="my-4">
+    <div class="row">
 
-        {% endfor %}
-        </tbody>
-    </table>
+        <div id="strategy" class="col-2">
+            <p class="textd">策略名称</p>
+            <hr>
+        </div>
+
+        <div id="periods" class="col-2">
+            <p class="textd">周期</p>
+            <hr>
+        </div>
+
+        <div id="codes" class="col-2">
+            <p class="textd">品种</p>
+            <hr>
+
+        </div>
+        <div id="times" class="col-6">
+            <p class="textd">时间</p>
+            <hr>
+
+        </div>
+    </div>
+
 </div>
 <script>
-    function delete_file(path) {
-        console.log(path)
+    let data = {}
+    // function delete_file(path) {
+    //     console.log(path)
+    //     $.ajax({
+    //         url: "{{ url_for('delete')}}",
+    //         data: {path: path},
+    //         type: "GET",
+    //         dataType: "json",
+    //         success: function (data) {
+    //             alert(data['result'])
+    //             location.reload();
+    //         }
+    //     });
+    // }
+
+    window.onload = function () {
+        function init_page() {
+            $.ajax({
+                url: "{{ url_for('list_strategy')}}",
+                type: "GET",
+                dataType: "json",
+                success: function (data) {
+                    var n = document.getElementById("strategy");
+                    for (var i in data["data"]) {
+                        var str = data["data"][i]
+                        var childNode = document.createElement('li');
+                        childNode.innerText = str;
+                        childNode.setAttribute("id", str);
+                        childNode.setAttribute("class", "str");
+                        childNode.onclick = function (e) {
+                            click_dom("str", e.target.innerHTML)
+                        };
+                        n.appendChild(childNode);
+                    }
+                }
+            });
+        }
+
+        init_page();
+    }
+
+    // 清除某个元素下面的所有li
+    function clear_dom(id) {
+        const parent = document.getElementById(id);
+        const r = parent.childNodes;
+        const dom = [];
+        for (let i in r) {
+            console.log(r[i].nodeName)
+            if (r[i].nodeName == "LI" || r[i].nodeName == "A") {
+                dom.push(r[i])
+            }
+        }
+        for (d in dom) {
+            parent.removeChild(dom[d])
+        }
+
+    }
+
+    function init_click_color(element, variable) {
+        const rx = document.getElementById(element).parentNode.children;
+        for (var i in rx) {
+            if (rx[i].style != undefined) {
+                rx[i].style.color = "";
+            }
+        }
+        document.getElementById(element).style.color = "#bd2130"
+        data[variable] = element;
+    }
+
+    function click_dom(type, element) {
+        if (type === "str") {
+            init_click_color(element, "strategy")
+            clear_dom("periods")
+            request_period(element)
+            clear_dom("codes")
+            clear_dom("times")
+        } else if (type === "periods") {
+            init_click_color(element, "periods")
+            clear_dom("codes")
+            request_code(data['strategy'], element)
+            clear_dom("times")
+        } else if (type === "codes") {
+            init_click_color(element, "codes")
+            clear_dom("times")
+            request_time(data['strategy'], data["periods"], element)
+        }
+    }
+
+    function get_path(times) {
+        times = times.replace(new RegExp(/([:])/g), '_');
+        var path = data['strategy'] + "_" + data["periods"] + "_" + data["codes"] + "_" + times + ".html"
+        return path
+    }
+
+
+    function request_time(strs, period, code) {
+        var data = {strs: strs, periods: period, codes: code};
         $.ajax({
-            url: "{{ url_for('delete')}}",
-            data: {path: path},
-            type: "GET",
-            dataType: "json",
+            url: "{{ url_for('get_time')}}",
+            data: data,
+            type: "POST",
+            // dataType: "json",
             success: function (data) {
-                alert(data['result'])
-                location.reload();
+                var n = document.getElementById("times");
+                for (var i in data["data"]) {
+                    var str = data["data"][i]
+                    var childNode = document.createElement('a');
+                    childNode.innerText = str;
+                    childNode.setAttribute("id", str);
+                    childNode.setAttribute("class", "center");
+                    childNode.setAttribute("target", "_blank");
+                    var path = get_path(str);
+                    childNode.setAttribute("href", request_path(path));
+                    n.appendChild(childNode);
+                }
             }
         });
+
+    }
+
+    function request_path(path) {
+        return "{{url_for('index_me')}}" + path
+    }
+
+    function request_code(strs, periods) {
+        $.ajax({
+            url: "{{ url_for('get_code')}}",
+            data: {strs: strs, periods: periods},
+            type: "POST",
+            dataType: "json",
+            success: function (data) {
+                var n = document.getElementById("codes");
+                for (var i in data["data"]) {
+                    var str = data["data"][i]
+                    var childNode = document.createElement('li');
+                    childNode.innerText = str;
+                    childNode.setAttribute("id", str);
+                    childNode.setAttribute("class", "str");
+                    childNode.onclick = function (e) {
+                        click_dom("codes", e.target.innerHTML)
+                    };
+                    n.appendChild(childNode);
+                }
+            }
+        });
+    }
+
+    function request_period(strs) {
+        $.ajax({
+            url: "{{ url_for('get_period')}}",
+            data: {strs: strs},
+            type: "POST",
+            dataType: "json",
+            success: function (data) {
+                var n = document.getElementById("periods");
+                for (var i in data["data"]) {
+                    var str = data["data"][i]
+                    var childNode = document.createElement('li');
+                    childNode.innerText = str;
+                    childNode.setAttribute("id", str);
+                    childNode.setAttribute("class", "str");
+                    childNode.onclick = function (e) {
+                        click_dom("periods", e.target.innerHTML)
+                    };
+                    n.appendChild(childNode);
+                }
+            }
+        });
+
+    }
+
+
+    // 对某个元素id下面设置
+
+    function set_keys(tp, keys) {
     }
 
 </script>
